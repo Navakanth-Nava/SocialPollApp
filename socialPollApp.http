@@ -3,7 +3,7 @@ POST http://localhost:3000/login
 Content-Type: application/json
 
 {
-    "username":"Navakanth124",
+    "username":"nava123",
     "password": "nava@146"
 }
 
@@ -13,14 +13,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Ik5hd
 
 ###//casting vote//
 
-PUT http://localhost:3000/voting/?order_by=votes&search_q=Dhoni
+PUT http://localhost:3000/voting/2
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Ik5hdmFrYW50aDEyNCIsImlhdCI6MTYzMDU4MDkxOX0.bZqt-QOyXCxKwckmZQjKPVIU3Yj5FZ3oLXHMSSvEaP4
-Content-Type: application/json
-
-{
-    "name":"Dhoni",
-    "votes":24
-}
 
 ###//admin adding candidates to voting poll//
 
@@ -28,8 +22,8 @@ POST http://localhost:3000/pollUsers
 Content-Type: application/json
 
 {
-    "name":"Hardik Pandey",
-    "votes":16
+    "name":"Kholi",
+    "votes":13
 }
 
 
@@ -38,11 +32,12 @@ POST http://localhost:3000/register
 Content-Type: application/json
 
 {
-    "username":"adhi123",
-    "name":"Adithya",
-    "password":"adhi@146",
+    "username":"nava123",
+    "name":"Navakanth",
+    "password":"nava@146",
     "gender":"Male",
-    "location":"Hyderabad"
+    "location":"Hyderabad",
+    "age":20
 }
 
 ###//admin deleting candidates from database//
@@ -50,7 +45,7 @@ DELETE http://localhost:3000/deleteUser
 Content-Type: application/json
 
 {
-    "name":"Rakesh"
+    "name":"Navakanth"
 }
 
 ###//admin deleting candidates from voting poll//

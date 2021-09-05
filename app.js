@@ -92,28 +92,27 @@ app.get("/users", async (request, response) => {
 
 //casting vote//
 
-app.put("/voting/", userAuthentication, async (request, response) => {
-  const { search_q, order_by } = request.query;
+app.put("/voting/:id", userAuthentication, async (request, response) => {
+  const { id } = request.params;
   const pollUser = `
-            SELECT name,sum(${order_by}+1) AS ${order_by}
+            SELECT name,votes
             FROM poll
-            WHERE name LIKE '${search_q}'`;
+            WHERE id = '${id}';`;
   const dbResponse = await database.all(pollUser);
-  if (dbResponse[0].name === null) {
-    response.status(400);
-    response.send("Invalid Poll User");
-  } else {
-    let dbResponseName = dbResponse[0].name;
-    const { name, votes } = request.body;
-    const updatePollUser = `
+  let dbResponseName = dbResponse[0].name;
+  let dbResponseVotes = dbResponse[0].votes;
+  const updatePollUser = `
         UPDATE poll
         SET 
             name='${dbResponseName}',
-            votes='${votes + 1}'
-            WHERE name LIKE '${name}';`;
-    await database.run(updatePollUser);
-    response.send("Status Updated");
-  }
+            votes='${parseInt(dbResponseVotes) + 1}'
+            WHERE id= '${id}';`;
+  await database.run(updatePollUser);
+  response.send(
+    `You voted to ${dbResponseName} and real time votes are ${
+      parseInt(dbResponseVotes) + 1
+    }`
+  );
 });
 
 //admin adding candidates to voting poll//
@@ -122,7 +121,6 @@ app.post("/pollUsers", async (request, response) => {
   const { name, votes } = request.body;
   const selectUserQuery = `SELECT * FROM poll WHERE name = '${name}';`;
   const databaseUser = await database.get(selectUserQuery);
-
   if (databaseUser === undefined) {
     const createUserQuery = `
      INSERT INTO
@@ -144,7 +142,7 @@ app.post("/pollUsers", async (request, response) => {
 //admin adding candidates into database//
 
 app.post("/register", async (request, response) => {
-  const { username, name, password, gender, location } = request.body;
+  const { username, name, password, gender, location, age } = request.body;
   const hashedPassword = await bcrypt.hash(password, 10);
   const selectUserQuery = `SELECT * FROM user WHERE username = '${username}';`;
   const databaseUser = await database.get(selectUserQuery);
@@ -152,14 +150,15 @@ app.post("/register", async (request, response) => {
   if (databaseUser === undefined) {
     const createUserQuery = `
      INSERT INTO
-      user (username, name, password, gender, location)
+      user (username, name, password, gender, location,age)
      VALUES
       (
        '${username}',
        '${name}',
        '${hashedPassword}',
        '${gender}',
-       '${location}'  
+       '${location}',
+       '${age}' 
       );`;
 
     await database.run(createUserQuery);
