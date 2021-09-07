@@ -45,7 +45,29 @@ const userAuthentication = (request, response, next) => {
   } else {
     jwt.verify(jwtToken, "MY_SECRET_KEY", async (error, playload) => {
       if (error) {
-        response.send("Invalid Access Token");
+        response.send("Invalid User Token");
+      } else {
+        next();
+      }
+    });
+  }
+};
+
+//middleware function for admin//
+
+const adminAuthentication = (request, response, next) => {
+  let jwtToken;
+  const authHeader = request.headers["authorization"];
+  if (authHeader !== undefined) {
+    jwtToken = authHeader.split(" ")[1];
+  }
+  if (authHeader === undefined) {
+    response.status(401);
+    response.send("Invalid Access Token");
+  } else {
+    jwt.verify(jwtToken, "MY_SECRET_ADMIN_KEY", async (error, playload) => {
+      if (error) {
+        response.send("Invalid Admin Token");
       } else {
         next();
       }
@@ -71,10 +93,14 @@ app.post("/login", async (request, response) => {
     response.send("Invalid User");
   } else {
     const isPasswordMatched = await bcrypt.compare(password, dbUser.password);
-    if (isPasswordMatched === true) {
+    if (isPasswordMatched === true && dbUser.role === "admin") {
       const playload = { username: username };
-      const jwtToken = jwt.sign(playload, "MY_SECRET_KEY");
-      response.send({ jwtToken });
+      const jwtTokenAdmin = jwt.sign(playload, "MY_SECRET_ADMIN_KEY");
+      response.send({ jwtTokenAdmin });
+    } else if (isPasswordMatched === true && dbUser.role === "user") {
+      const playload = { username: username };
+      const jwtTokenUser = jwt.sign(playload, "MY_SECRET_KEY");
+      response.send({ jwtTokenUser });
     } else {
       response.status(400);
       response.send("Invalid Password");
@@ -82,9 +108,9 @@ app.post("/login", async (request, response) => {
   }
 });
 
-//user Details//
+// admin checking user Details//
 
-app.get("/users", async (request, response) => {
+app.get("/users", adminAuthentication, async (request, response) => {
   const userDetails = `SELECT * FROM user`;
   const dbUserDetails = await database.all(userDetails);
   response.send(dbUserDetails);
@@ -117,7 +143,7 @@ app.put("/voting/:id", userAuthentication, async (request, response) => {
 
 //admin adding candidates to voting poll//
 
-app.post("/pollUsers", async (request, response) => {
+app.post("/pollUsers", adminAuthentication, async (request, response) => {
   const { name, votes } = request.body;
   const selectUserQuery = `SELECT * FROM poll WHERE name = '${name}';`;
   const databaseUser = await database.get(selectUserQuery);
@@ -141,8 +167,16 @@ app.post("/pollUsers", async (request, response) => {
 
 //admin adding candidates into database//
 
-app.post("/register", async (request, response) => {
-  const { username, name, password, gender, location, age } = request.body;
+app.post("/register", adminAuthentication, async (request, response) => {
+  const {
+    username,
+    name,
+    password,
+    gender,
+    location,
+    age,
+    role,
+  } = request.body;
   const hashedPassword = await bcrypt.hash(password, 10);
   const selectUserQuery = `SELECT * FROM user WHERE username = '${username}';`;
   const databaseUser = await database.get(selectUserQuery);
@@ -150,7 +184,7 @@ app.post("/register", async (request, response) => {
   if (databaseUser === undefined) {
     const createUserQuery = `
      INSERT INTO
-      user (username, name, password, gender, location,age)
+      user (username, name, password, gender, location,age,role)
      VALUES
       (
        '${username}',
@@ -158,7 +192,8 @@ app.post("/register", async (request, response) => {
        '${hashedPassword}',
        '${gender}',
        '${location}',
-       '${age}' 
+       '${age}',
+       '${role}' 
       );`;
 
     await database.run(createUserQuery);
@@ -171,7 +206,7 @@ app.post("/register", async (request, response) => {
 
 //admin deleting candidates from voting database//
 
-app.delete("/deleteUser", async (request, response) => {
+app.delete("/deleteUser", adminAuthentication, async (request, response) => {
   const { name } = request.body;
   const deleteUserQuery = `DELETE
     FROM user 
@@ -182,18 +217,22 @@ app.delete("/deleteUser", async (request, response) => {
 
 //admin deleting candidates from voting poll//
 
-app.delete("/deletePollUser", async (request, response) => {
-  const { name } = request.body;
-  const deletePollQuery = `DELETE
+app.delete(
+  "/deletePollUser",
+  adminAuthentication,
+  async (request, response) => {
+    const { name } = request.body;
+    const deletePollQuery = `DELETE
     FROM poll 
     WHERE name='${name}';`;
-  await database.run(deletePollQuery);
-  response.send("Candidate Deleted");
-});
+    await database.run(deletePollQuery);
+    response.send("Candidate Deleted");
+  }
+);
 
 //poll result//
 
-app.get("/pollResult/", async (request, response) => {
+app.get("/pollResult/", adminAuthentication, async (request, response) => {
   const { search_q = "", order_by, order, limit } = request.query;
   const selectWinner = `
         SELECT *
